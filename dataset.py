@@ -1,5 +1,6 @@
+#import libraries
 import cryptowatch as cw
-cw.api_key = "U3ORVKWPQBXB3TH9MJIK"
+cw.api_key = "your API key here"
 import pandas as pd
 import pandas_ta as ta
 from scipy.signal import savgol_filter
@@ -7,13 +8,14 @@ import numpy as np
 from scipy.stats import spearmanr
 import matplotlib.pyplot as plt
 import seaborn as sns
-#%%
+
+#get cryptocurrencies data
 def get_crypto_data():
     dataset = {}
     kraken = cw.markets.list("kraken")
     for market in kraken.markets:
         ticker = "{}:{}".format(market.exchange, market.pair).upper()
-        if ticker.endswith('USD'):
+        if ticker.endswith('USD'):  #use data only denominated in US dollars
             candles = cw.markets.get(ticker, ohlc=True, periods=["1d"])
             try:
                 if len(candles.of_1d) > 1500:
@@ -22,7 +24,8 @@ def get_crypto_data():
                 pass
     return dataset
 dataset = get_crypto_data()
-#%%
+
+#get location features
 def loc_feature(data):
     loc = []
     for i in range(1,len(data)):
@@ -147,7 +150,8 @@ def loc_feature(data):
     loc = pd.DataFrame(loc, index = data.index[1:])
     data["Location"] = loc
     return data
-#%%
+
+#get rest of the features and output labels
 def get_features(dataset):
     for ticker in dataset:
         dataset[ticker]['returns'] = dataset[ticker]['close'].pct_change()
@@ -186,7 +190,8 @@ dataset = get_features(dataset)
 dataset = pd.concat(dataset)
 df_droplevel = dataset.droplevel(1)
 dataset = df_droplevel.groupby(level = 0)
-#%%
+
+#Spearman Correlation
 def get_corr_matrix(data):
     combined_matrix = np.zeros((8, 8))
     
@@ -204,11 +209,11 @@ def get_corr_matrix(data):
     correlation_df = pd.DataFrame(average_matrix, columns=df_droplevel.iloc[:,[7,6,10,11,12,13,14,15]].columns, index=df_droplevel.iloc[:,[7,6,10,11,12,13,14,15]].columns)
     return correlation_df
 correlation_df = get_corr_matrix(dataset)
-#%%
+
 plt.figure(figsize=(16, 10),dpi = 600)
 sns.heatmap(correlation_df, annot=True, cmap='coolwarm', vmin=-1, vmax=1, fmt='.3f', linewidths=.5)
 plt.title("Spearman Correlation Heatmap")
 plt.xticks(rotation = 45)
 plt.show()
-#%%
+# save your data
 df_droplevel.to_csv(r"C:\Users\86189\Desktop\Quantitative Finance\dataSet2.csv")
